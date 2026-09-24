@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Colonnes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="home">
+  <h1>Colonnes</h1>
+  <p class="tag">Le jeu des cartes de -2 à 12, chacun sur son téléphone, sur le même Wi-Fi.</p>
+  <label>Votre prénom<input id="name" maxlength="14" autocomplete="off"></label>
+  <button id="create">Créer une partie (je suis l'hôte)</button>
+  <div class="or">ou rejoindre l'adresse affichée chez l'hôte</div>
+  <div class="row"><input id="ip" inputmode="decimal" placeholder="192.168.1.23" autocomplete="off"><button id="join">Rejoindre</button></div>
+  <p id="status" class="note">Tous les téléphones sur le même Wi-Fi, ou connectés au partage de connexion de l'hôte.</p>
+  <button class="ghost" id="rulesBtn">Règles</button>
+</main>
+
+<main id="lobby" hidden>
+  <p id="lhead">Adresse de la partie</p>
+  <div id="lcode" class="bigcode"></div>
+  <button class="ghost" id="share">Inviter</button>
+  <ul id="lplayers"></ul>
+  <p id="lwait" class="note"></p>
+  <button id="start">Lancer la partie</button>
+  <button class="ghost" id="leave">Quitter</button>
+</main>
+
+<main id="wait" hidden><p class="note" id="waitmsg">Connexion à l'hôte…</p><button class="ghost" id="cancel">Annuler</button></main>
+
+<main id="game" hidden>
+  <header><span id="ground"></span><span id="glast"></span><button class="x" id="quit" aria-label="Quitter">✕</button></header>
+  <section id="opps"></section>
+  <section id="table">
+    <div id="deck" class="pile"></div>
+    <div id="disc" class="pile"></div>
+    <div id="drawn"></div>
+  </section>
+  <p id="ghint"></p>
+  <section id="mine"></section>
+  <p id="mscore"></p>
+  <div id="overlay" hidden></div>
+</main>
+
+<dialog id="rules"><form method="dialog">
+  <h2>Règles</h2>
+  <ul>
+    <li><b>But</b> : avoir le moins de points. Fin de partie quand un joueur atteint 100.</li>
+    <li><b>Départ</b> : 12 cartes cachées (4 colonnes × 3). Chacun en retourne 2 ; le plus gros total commence (puis celui qui a fini la manche précédente).</li>
+    <li><b>Tour</b> : piocher → échanger avec une carte de sa grille, <i>ou</i> la jeter et retourner une carte cachée. Ou prendre la défausse → échange obligatoire.</li>
+    <li><b>Colonne</b> de 3 cartes identiques visibles : éliminée.</li>
+    <li><b>Fin de manche</b> : quand un joueur a tout retourné, les autres jouent un dernier tour. S'il n'a pas strictement le plus petit score (positif), le sien est doublé.</li>
+  </ul>
+  <button>Fermer</button>
+</form></dialog>
+
+<div id="toast"></div>
+<div id="conn" hidden>Hôte injoignable, nouvelle tentative…</div>
+<script src="logic.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
