@@ -1,4 +1,4 @@
-# Colonnes
+# SKYDO
 
 Jeu de cartes multijoueur (2 à 8 joueurs, un smartphone chacun), **sans serveur ni base de données** : un téléphone héberge la partie, les autres s'y connectent sur le réseau local.
 
