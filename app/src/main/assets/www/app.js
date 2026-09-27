@@ -1,5 +1,5 @@
 // Mode hôte : état en mémoire, publié via le serveur local (LanServer).
-// Mode invité : interroge l'hôte en HTTP via le pont Android.
+// Mode invité : interroge l'hôte en HTTP (pont Android dans l'app, fetch dans un navigateur).
 var PORT = 8765;
 var $ = function (s) { return document.querySelector(s); };
 function esc(s) { return String(s).replace(/[&<>"]/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]; }); }
@@ -10,13 +10,20 @@ var role = null, host = null, g = null, ver = -1, timer = null, lost = 0, tickin
 function toast(t) { var el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(function () { el.classList.remove('on'); }, 2600); }
 function show(id) { ['home', 'lobby', 'wait', 'game'].forEach(function (s) { $('#' + s).hidden = s !== id; }); }
 
-if (!window.Android) { $('#home').innerHTML = '<p class="err">Ce jeu fonctionne dans l\'application Android Colonnes.</p>'; throw new Error('no bridge'); }
+// App Android (pont Java) ou navigateur servi par le téléphone hôte
+var IS_APP = !!window.Android;
 
-// ---------- Réseau (pont Java asynchrone) ----------
+// ---------- Réseau ----------
 var pend = {}, nid = 0;
 window.__net = function (id, code, body) { var p = pend[id]; delete pend[id]; if (p) p({ code: code, body: body }); };
-function get(url) { return new Promise(function (res) { var id = ++nid; pend[id] = res; Android.http(id, url); }); }
-function base() { return 'http://' + host + ':' + PORT; }
+function get(url) {
+  if (IS_APP) return new Promise(function (res) { var id = ++nid; pend[id] = res; Android.http(id, url); });
+  return fetch(url, { cache: 'no-store' })
+    .then(function (r) { return r.status === 200 ? r.text().then(function (b) { return { code: 200, body: b }; }) : { code: r.status, body: '' }; })
+    .catch(function () { return { code: 0, body: '' }; });
+}
+function base() { return IS_APP ? 'http://' + host + ':' + PORT : ''; }
+function hostUrl() { return 'http://' + (Android.ips() || '?').split(',')[0] + ':' + PORT; }
 
 $('#name').value = localStorage.getItem('name') || '';
 function getName() {
@@ -25,6 +32,12 @@ function getName() {
   localStorage.setItem('name', n); return n;
 }
 (function prefillIp() {
+  if (!IS_APP) {
+    ['#create', '#ip', '.or'].forEach(function (q) { $(q).hidden = true; });
+    $('#join').textContent = 'Rejoindre la partie';
+    $('#status').textContent = 'Partie hébergée par ' + location.hostname + '. Vous pouvez aussi installer l\'application.';
+    return;
+  }
   var last = localStorage.getItem('ip'), mine = (Android.ips() || '').split(',')[0];
   $('#ip').value = last || (mine ? mine.replace(/\d+$/, '') : '');
 })();
@@ -108,11 +121,11 @@ function leave() {
 }
 
 $('#create').onclick = function () { hostStart(false); };
-$('#join').onclick = function () { clientJoin($('#ip').value.trim()); };
+$('#join').onclick = function () { clientJoin(IS_APP ? $('#ip').value.trim() : location.hostname); };
 $('#leave').onclick = function () { if (role !== 'host' || confirm('Fermer la partie pour tous ?')) leave(); };
 $('#cancel').onclick = leave;
 $('#quit').onclick = function () { if (confirm(role === 'host' ? 'Vous êtes l\'hôte : la partie s\'arrêtera pour tous. Quitter ?' : 'Quitter la partie ?')) leave(); };
-$('#share').onclick = function () { Android.share('Rejoins ma partie de Colonnes (même Wi-Fi) : ' + $('#lcode').textContent); };
+$('#share').onclick = function () { Android.share('Rejoins ma partie de Colonnes (même Wi-Fi)\nNavigateur : ' + hostUrl() + '\nApplication : ' + $('#lcode').textContent); };
 $('#start').onclick = function () { send({ t: 'start' }); };
 
 // ---------- Rendu ----------
@@ -139,6 +152,8 @@ function renderLobby(order) {
   $('#lhead').textContent = isHost ? 'Adresse à saisir par les autres joueurs' : 'Connecté à';
   $('#lcode').textContent = isHost ? (Android.ips() || '?').split(',').join(' ou ') : host;
   $('#share').hidden = !isHost;
+  $('#lurl').hidden = !isHost;
+  if (isHost) $('#lurl').innerHTML = 'Sans l\'application : ouvrir <b>' + esc(hostUrl()) + '</b> dans un navigateur';
   $('#lplayers').innerHTML = order.map(function (u) {
     return '<li>' + esc(g.players[u].name) + (u === g.host ? ' <small>(hôte)</small>' : '') + (u === uid ? ' <small>(vous)</small>' : '') + '</li>';
   }).join('');
@@ -151,8 +166,8 @@ function hint(order) {
   if (g.status === 'reveal2') return upCount(grid) < 2 ? 'Retournez ' + (2 - upCount(grid)) + ' carte(s) de votre grille' : 'En attente des autres joueurs';
   if (g.status !== 'play') return '';
   if (!mine) return 'Au tour de ' + esc(g.players[cur].name) + (g.finisher ? ' (dernier tour)' : '');
-  if (g.mustReveal) return 'Retournez une carte cachée';
-  if (g.drawn != null) return g.from === 'deck' ? 'Touchez une carte de votre grille pour échanger, ou la défausse pour jeter' : 'Touchez la carte de votre grille à remplacer';
+  if (g.mustReveal) return 'Carte jetée : retournez une carte cachée de votre grille';
+  if (g.drawn != null) return g.from === 'deck' ? 'Touchez une carte de votre grille pour l\'échanger, ou « Jeter »' : 'Touchez la carte de votre grille à remplacer, ou « Reposer »';
   return 'À vous : piochez ou prenez la défausse' + (g.finisher ? ' (dernier tour)' : '');
 }
 
@@ -173,9 +188,11 @@ function renderGame(order) {
   var disc = arr(g.discard), deck = arr(g.deck);
   $('#deck').innerHTML = '<div class="card down big"></div><span>' + deck.length + '</span>';
   $('#disc').innerHTML = disc.length ? cardHtml(val(disc[disc.length - 1])) : '<div class="card empty"></div>';
-  $('#drawn').innerHTML = g.drawn != null ? cardHtml(val(g.drawn)) + '<span>' + (mine ? 'votre carte' : 'en main') + '</span>' : '';
+  $('#drawn').innerHTML = g.drawn == null ? '' : cardHtml(val(g.drawn))
+    + (mine ? '<button class="mini" id="dropBtn">' + (g.from === 'deck' ? 'Jeter' : 'Reposer') + '</button>' : '<span>en main</span>');
+  if (mine) $('#dropBtn').onclick = function (e) { e.stopPropagation(); send({ t: g.from === 'deck' ? 'drop' : 'undo' }); };
   $('#deck').classList.toggle('act', mine && g.drawn == null && !g.mustReveal);
-  $('#disc').classList.toggle('act', !!(mine && ((g.drawn == null && !g.mustReveal && disc.length) || g.from === 'deck')));
+  $('#disc').classList.toggle('act', !!(mine && ((g.drawn == null && !g.mustReveal && disc.length) || g.drawn != null)));
 
   var grid = arr(g.grids[uid]);
   $('#mine').innerHTML = grid.map(function (c, i) { return cardHtml(c, 'data-i="' + i + '"'); }).join('');
@@ -200,8 +217,10 @@ function renderGame(order) {
   } else ov.hidden = true;
 }
 
-$('#deck').onclick = function () { send({ t: 'deck' }); };
-$('#disc').onclick = function () { send({ t: g && g.drawn != null ? 'drop' : 'disc' }); };
+// Carte en main : toucher la pioche ou la défausse la jette (piochée) ou la repose (prise à la défausse)
+function throwAway() { return g.from === 'deck' ? 'drop' : 'undo'; }
+$('#deck').onclick = function () { if (g) send({ t: g.drawn != null ? throwAway() : 'deck' }); };
+$('#disc').onclick = function () { if (g) send({ t: g.drawn != null ? throwAway() : 'disc' }); };
 $('#mine').onclick = function (e) {
   var el = e.target.closest('[data-i]'); if (!el || !g) return;
   var i = +el.dataset.i;
@@ -213,7 +232,7 @@ $('#rulesBtn').onclick = function () { $('#rules').showModal(); };
 // Reprise automatique après fermeture de l'app
 (function boot() {
   var r = localStorage.getItem('role');
-  if (r === 'host') { try { g = JSON.parse(localStorage.getItem('hostGame')); } catch (e) { g = null; } if (g && $('#name').value) { hostStart(true); return; } }
-  if (r === 'client' && localStorage.getItem('ip') && $('#name').value) { clientJoin(localStorage.getItem('ip')); return; }
+  if (r === 'host' && IS_APP) { try { g = JSON.parse(localStorage.getItem('hostGame')); } catch (e) { g = null; } if (g && $('#name').value) { hostStart(true); return; } }
+  if (r === 'client' && localStorage.getItem('ip') && $('#name').value && (IS_APP || localStorage.getItem('ip') === location.hostname)) { clientJoin(localStorage.getItem('ip')); return; }
   show('home');
 })();

@@ -124,6 +124,11 @@ function act(g, uid, a) {
       g.last = me + ' défausse ' + g.drawn; g.drawn = null; g.from = null;
       if (allUp(grid)) { endTurn(g, uid); return null; }
       g.mustReveal = true; return null;
+    case 'undo':
+      if (!has || g.from !== 'disc') return 'x';
+      g.discard = arr(g.discard).concat([g.drawn]);
+      g.last = me + ' repose le ' + g.drawn; g.drawn = null; g.from = null;
+      return null;
     case 'swap':
       if (!has || !c || c.gone) return 'x';
       g.discard = arr(g.discard).concat([c.v]);

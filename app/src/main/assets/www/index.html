@@ -23,6 +23,7 @@
 <main id="lobby" hidden>
   <p id="lhead">Adresse de la partie</p>
   <div id="lcode" class="bigcode"></div>
+  <p id="lurl" class="note" hidden></p>
   <button class="ghost" id="share">Inviter</button>
   <ul id="lplayers"></ul>
   <p id="lwait" class="note"></p>
@@ -51,7 +52,7 @@
   <ul>
     <li><b>But</b> : avoir le moins de points. Fin de partie quand un joueur atteint 100.</li>
     <li><b>Départ</b> : 12 cartes cachées (4 colonnes × 3). Chacun en retourne 2 ; le plus gros total commence (puis celui qui a fini la manche précédente).</li>
-    <li><b>Tour</b> : piocher → échanger avec une carte de sa grille, <i>ou</i> la jeter et retourner une carte cachée. Ou prendre la défausse → échange obligatoire.</li>
+    <li><b>Tour</b> : piocher → échanger avec une carte de sa grille, <i>ou</i> la jeter (bouton « Jeter » ou toucher la défausse) et retourner une carte cachée. Ou prendre la défausse → échange obligatoire (« Reposer » pour changer d'avis).</li>
     <li><b>Colonne</b> de 3 cartes identiques visibles : éliminée.</li>
     <li><b>Fin de manche</b> : quand un joueur a tout retourné, les autres jouent un dernier tour. S'il n'a pas strictement le plus petit score (positif), le sien est doublé.</li>
   </ul>

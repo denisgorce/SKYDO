@@ -68,3 +68,4 @@ dialog ul{padding-left:18px}dialog li{margin-bottom:6px}
 .row input#ip{text-transform:none;letter-spacing:1px;font-size:18px}
 #wait{text-align:center;padding-top:80px}
 #conn{position:fixed;top:0;left:0;right:0;background:var(--high);color:#fff;text-align:center;font-size:14px;font-weight:700;padding:calc(env(safe-area-inset-top) + 4px) 8px 4px}
+#drawn .mini{width:auto;margin:10px 0 0;padding:6px 14px;font-size:15px}
